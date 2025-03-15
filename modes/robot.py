@@ -1,0 +1,133 @@
+from .mode import ModeWide, ColorScheme, Tone, Channel
+
+
+class Robot24(ModeWide):
+    NAME = "Robot 24"
+
+    VIS_CODE = 4
+    VIS_COUNT = 1
+
+    COLOR = ColorScheme.YUV
+    LINE_WIDTH = 160
+    LINE_COUNT = 120
+    SCAN_TIME = 0.092000
+    HALF_SCAN_TIME = SCAN_TIME / 2
+    SYNC_PULSE = 0.006000
+    SYNC_PORCH = 0.002000
+    SEP_PULSE = 0.003000
+    SEP_PORCH = 0.001000
+
+    CHAN_COUNT = 3
+    CHAN_SYNC = 0
+    CHAN_TIME = SEP_PULSE + SCAN_TIME
+    HALF_CHAN_TIME = SEP_PULSE + HALF_SCAN_TIME
+
+    CHAN_OFFSETS = [SYNC_PULSE + SYNC_PORCH]
+    CHAN_OFFSETS.append(CHAN_OFFSETS[0] + CHAN_TIME + SEP_PORCH)
+    CHAN_OFFSETS.append(CHAN_OFFSETS[1] + HALF_CHAN_TIME + SEP_PORCH)
+
+    LINE_TIME = CHAN_OFFSETS[2] + HALF_SCAN_TIME
+    PIXEL_TIME = SCAN_TIME / LINE_WIDTH
+    HALF_PIXEL_TIME = HALF_SCAN_TIME / LINE_WIDTH
+    WINDOW_FACTOR = 15.4  # FIXME
+
+    TIMING_SEQUENCE = [
+        Tone(1200, SYNC_PULSE),
+        Tone(1500, SYNC_PORCH),
+        Channel(0, PIXEL_TIME),
+        Tone(1500, SEP_PULSE),
+        Tone(1900, SEP_PORCH),
+        Channel(1, HALF_PIXEL_TIME),
+        Tone(2300, SEP_PULSE),
+        Tone(1900, SEP_PORCH),
+        Channel(2, HALF_PIXEL_TIME),
+    ]
+
+    HAS_ODD_LINES = False
+    HAS_START_SYNC = False
+    HAS_HALF_SCAN = True
+    HAS_ALT_SCAN = False
+
+
+class Robot36(ModeWide):
+    NAME = "Robot 36"
+
+    VIS_CODE = 8
+    VIS_COUNT = 1
+
+    COLOR = ColorScheme.YUV
+    LINE_WIDTH = 320
+    LINE_COUNT = 240
+    SCAN_TIME = 0.088000
+    HALF_SCAN_TIME = SCAN_TIME / 2
+    SYNC_PULSE = 0.009000
+    SYNC_PORCH = 0.003000
+    SEP_PULSE = 0.004500
+    SEP_PORCH = 0.001500
+
+    CHAN_COUNT = 2
+    CHAN_SYNC = 0
+    CHAN_TIME = SEP_PULSE + SCAN_TIME
+
+    CHAN_OFFSETS = [SYNC_PULSE + SYNC_PORCH]
+    CHAN_OFFSETS.append(CHAN_OFFSETS[0] + CHAN_TIME + SEP_PORCH)
+
+    LINE_TIME = CHAN_OFFSETS[1] + HALF_SCAN_TIME
+    PIXEL_TIME = SCAN_TIME / LINE_WIDTH
+    HALF_PIXEL_TIME = HALF_SCAN_TIME / LINE_WIDTH
+    WINDOW_FACTOR = 7.70
+
+    TIMING_SEQUENCE = [
+        Tone(1200, SYNC_PULSE),
+        Tone(1500, SYNC_PORCH),
+        Channel(0, PIXEL_TIME),
+        Tone((1500, 2300), SEP_PULSE),
+        Tone(1900, SEP_PORCH),
+        Channel((1, 2), HALF_PIXEL_TIME),
+    ]
+
+    HAS_ODD_LINES = False
+    HAS_START_SYNC = False
+    HAS_HALF_SCAN = True
+    HAS_ALT_SCAN = True
+
+
+class Robot72(Robot36):
+    NAME = "Robot 72"
+
+    VIS_CODE = 12
+
+    LINE_WIDTH = 320
+    SCAN_TIME = 0.138000
+    HALF_SCAN_TIME = SCAN_TIME / 2
+    SYNC_PULSE = 0.009000
+    SYNC_PORCH = 0.003000
+    SEP_PULSE = 0.004500
+    SEP_PORCH = 0.001500
+
+    CHAN_COUNT = 3
+    CHAN_TIME = SEP_PULSE + SCAN_TIME
+    HALF_CHAN_TIME = SEP_PULSE + HALF_SCAN_TIME
+
+    CHAN_OFFSETS = [SYNC_PULSE + SYNC_PORCH]
+    CHAN_OFFSETS.append(CHAN_OFFSETS[0] + CHAN_TIME + SEP_PORCH)
+    CHAN_OFFSETS.append(CHAN_OFFSETS[1] + HALF_CHAN_TIME + SEP_PORCH)
+
+    LINE_TIME = CHAN_OFFSETS[2] + HALF_SCAN_TIME
+    PIXEL_TIME = SCAN_TIME / LINE_WIDTH
+    HALF_PIXEL_TIME = HALF_SCAN_TIME / LINE_WIDTH
+    WINDOW_FACTOR = 4.88
+
+    TIMING_SEQUENCE = [
+        Tone(1200, SYNC_PULSE),
+        Tone(1500, SYNC_PORCH),
+        Channel(0, PIXEL_TIME),
+        Tone(1500, SEP_PULSE),
+        Tone(1900, SEP_PORCH),
+        Channel(1, HALF_PIXEL_TIME),
+        Tone(1500, SEP_PULSE),
+        Tone(1900, SEP_PORCH),
+        Channel(2, HALF_PIXEL_TIME),
+    ]
+
+    HAS_ALT_SCAN = False
