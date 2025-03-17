@@ -22,8 +22,6 @@ class SC2Meta(ModeMetaclass):
 
 
 class SC2Abstract(ModeWide):
-    VIS_COUNT = 1
-
     COLOR = ColorScheme.RGB
     LINE_WIDTH = 320
     LINE_COUNT = 256

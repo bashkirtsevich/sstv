@@ -8,7 +8,7 @@ from PIL import Image
 from scipy.signal.windows import hann
 
 from modes import VIS_MAP
-from modes.mode import ColorScheme, Tone, Channel, LineSwitch, ModeWide, ModeNarrow
+from modes.mode import ColorScheme, Tone, Channel, LineSwitch, ModeWide, ModeNarrow, ToneGenerator
 
 BREAK_OFFSET = 0.300
 LEADER_OFFSET = 0.010 + BREAK_OFFSET
@@ -50,13 +50,20 @@ class SSTVDecoder:
         self.sample_rate = sample_rate
 
     def decode(self, signal: Signal) -> Image:
-        if not (header_end := self._find_header(signal)):
+        if not (header := self._find_header(signal)):
             return None
 
-        mode = self._decode_vis(signal, header_end)
+        hdr_start, hdr_len = header
+        header_end = hdr_start + hdr_len
 
-        vis_end = header_end + round(VIS_BIT_SIZE * 9 * self.sample_rate)
-        image_data = self._decode_image_data(signal, mode, vis_end)
+        mode, bit_len = self._decode_vis(signal, header_end)
+
+        vis_len = VIS_BIT_SIZE * (bit_len + 1) * self.sample_rate
+
+        vis_count = getattr(mode, "VIS_COUNT", 1)
+        vis_end = hdr_start + (vis_len + hdr_len) * vis_count
+
+        image_data = self._decode_image_data(signal, mode, round(vis_end))
 
         return self._draw_image(mode, image_data)
 
@@ -72,7 +79,7 @@ class SSTVDecoder:
         # Return frequency in hz
         return peak * self.sample_rate / len(windowed_data)
 
-    def _find_header(self, signal: Signal):
+    def _find_header(self, signal: Signal) -> typing.Optional[typing.Tuple[int, int]]:
         header_size = round(HDR_SIZE * self.sample_rate)
         window_size = round(HDR_WINDOW_SIZE * self.sample_rate)
 
@@ -117,12 +124,12 @@ class SSTVDecoder:
                     and abs(self._peak_fft_freq(vis_start_area) - 1200) < 50):
                 stop_msg = "Searching for calibration header... Found!{:>4}"
                 print(stop_msg.format(' '))
-                return current_sample + header_size
+                return current_sample, header_size
 
         print("Couldn't find SSTV header in the given audio file")
         return None
 
-    def _decode_vis_value(self, vis_bits: typing.List[int]) -> int:
+    def _decode_vis_value(self, vis_bits: typing.List[int]) -> typing.Tuple[int, int]:
         # Check for even parity in last bit
         for bit_len in (16, 8):
             # FIXME
@@ -131,11 +138,11 @@ class SSTVDecoder:
                 continue
 
             # LSB first so we must reverse and ignore the parity bit
-            return reduce(lambda value, bit: (value << 1) | bit, vis[-2::-1])
+            return reduce(lambda value, bit: (value << 1) | bit, vis[-2::-1]), bit_len
 
         raise ValueError("Error decoding VIS header (invalid parity bit)")
 
-    def _decode_vis(self, signal: Signal, vis_start: int):
+    def _decode_vis(self, signal: Signal, vis_start: int) -> tuple:
         """Decodes the vis from the audio data and returns the SSTV mode"""
 
         bit_size = round(VIS_BIT_SIZE * self.sample_rate)
@@ -149,15 +156,15 @@ class SSTVDecoder:
             # 1100 hz = 1, 1300hz = 0
             vis_bits.append(int(freq <= 1200))
 
-        vis_value = self._decode_vis_value(vis_bits)
+        vis_value, bit_len = self._decode_vis_value(vis_bits)
         if mode := VIS_MAP.get(vis_value):
             print("Detected SSTV mode {}".format(mode.NAME))
-            return mode
+            return mode, bit_len
 
         error = "SSTV mode is unsupported (VIS: {})"
         raise ValueError(error.format(vis_value))
 
-    def _align_sync(self, signal: Signal, mode, align_start, start_of_sync=True):
+    def _align_sync(self, signal: Signal, mode, align_start: int, start_of_sync: bool = True):
         """Returns sample where the beginning of the sync pulse was found"""
 
         # TODO - improve this
@@ -182,7 +189,7 @@ class SSTVDecoder:
         else:
             return end_sync
 
-    def _decode_image_data(self, signal: Signal, mode, image_start) -> typing.List[typing.List[typing.List[int]]]:
+    def _decode_image_data(self, signal: Signal, mode, image_start: int) -> typing.List[typing.List[typing.List[int]]]:
         window_factor = mode.WINDOW_FACTOR
         centre_window_time = (mode.PIXEL_TIME * window_factor) / 2
         pixel_window = round(centre_window_time * 2 * self.sample_rate)
@@ -196,12 +203,14 @@ class SSTVDecoder:
         seq_start = image_start
         if mode.HAS_START_SYNC:
             # Start at the end of the initial sync pulse
-            seq_start = self._align_sync(signal, mode, image_start, start_of_sync=False)
+            seq_start = self._align_sync(signal, mode, seq_start, start_of_sync=False)
             if seq_start is None:
                 raise EOFError("Reached end of audio before image data")
 
         for line in range(height):
-            if mode.CHAN_SYNC > 0 and line == 0:
+            if mode.CHAN_SYNC == -1:
+                seq_start += mode.LINE_TIME * self.sample_rate
+            elif mode.CHAN_SYNC > 0 and line == 0:
                 # Align seq_start to the beginning of the previous sync pulse
                 sync_offset = mode.CHAN_OFFSETS[mode.CHAN_SYNC]
                 seq_start -= round((sync_offset + mode.SCAN_TIME) * self.sample_rate)
@@ -210,8 +219,7 @@ class SSTVDecoder:
                 if chan == mode.CHAN_SYNC:
                     if line > 0 or chan > 0:
                         # Set base offset to the next line
-                        seq_start += round(mode.LINE_TIME *
-                                           self.sample_rate)
+                        seq_start += round(mode.LINE_TIME * self.sample_rate)
 
                     # Align to start of sync pulse
                     seq_start = self._align_sync(signal, mode, seq_start)
@@ -366,7 +374,8 @@ class SSTVEncoder:
         #     # self.write_fsk(fsk ^ 0x15)
         #     pass
         # else:
-        for _ in range(mode.VIS_COUNT):
+        vis_count = getattr(mode, "VIS_COUNT", 1)
+        for _ in range(vis_count):
             yield (1900, 0.3)
             yield (1200, 0.01)
             yield (1900, 0.3)
@@ -389,14 +398,25 @@ class SSTVEncoder:
         pixels = image.convert(mode.COLOR.mode_pil()).resize((width, height), Image.Resampling.LANCZOS).load()
 
         if mode.HAS_START_SYNC:
-            yield (mode.TONE_SYNC.freq, mode.TONE_SYNC.time)
+            if isinstance(mode.TONE_SYNC, list):
+                for tone in mode.TIMING_SEQUENCE:
+                    if isinstance(tone, ToneGenerator):
+                        yield from tone
+
+                    elif isinstance(tone, Tone):
+                        yield (tone.freq, tone.time)
+            else:
+                yield (mode.TONE_SYNC.freq, mode.TONE_SYNC.time)
 
         y = 0
         while y < height:
             odd_line = y % 2
 
             for tone in mode.TIMING_SEQUENCE:
-                if isinstance(tone, Tone):
+                if isinstance(tone, ToneGenerator):
+                    yield from tone
+
+                elif isinstance(tone, Tone):
                     if isinstance(freq := tone.freq, tuple):
                         freq = freq[odd_line]
 

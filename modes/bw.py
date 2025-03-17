@@ -17,8 +17,6 @@ class RobotBWMeta(ModeMetaclass):
 
 
 class RobotBWAbstract(ModeWide):
-    VIS_COUNT = 1
-
     COLOR = ColorScheme.BW
     LINE_WIDTH = 160
     LINE_COUNT = 120

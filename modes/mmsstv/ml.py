@@ -3,8 +3,6 @@ from modes.mode import ModeWide, ColorScheme
 
 
 class MMSSTVMLAbstract(ModeWide):
-    VIS_COUNT = 1
-
     COLOR = ColorScheme.YUV
     LINE_WIDTH = 640
     LINE_COUNT = 496

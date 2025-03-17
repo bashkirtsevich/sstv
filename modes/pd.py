@@ -25,8 +25,6 @@ class PDMeta(ModeMetaclass):
 
 
 class PDAbstract(ModeWide):
-    VIS_COUNT = 1
-
     COLOR = ColorScheme.YUV
 
     SYNC_PULSE = 0.009000  # sec

@@ -28,8 +28,6 @@ class MartinMeta(ModeMetaclass):
 
 
 class MartinAbstract(ModeWide):
-    VIS_COUNT = 1
-
     COLOR = ColorScheme.GBR
     LINE_WIDTH = 320
     LINE_COUNT = 256

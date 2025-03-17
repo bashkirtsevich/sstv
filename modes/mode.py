@@ -17,6 +17,12 @@ class LineSwitch:
     pass
 
 
+class ToneGenerator(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def gen(self) -> SSTVGen:
+        return None
+
+
 # FSKGARD = 100
 # FSKINTVAL = 22
 # FSKSPACE = 2100

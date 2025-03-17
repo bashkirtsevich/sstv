@@ -33,10 +33,10 @@
 #  'smPD290': 'PD290',     +
 #  'smRM8': 'B/W 8',       +
 #  'smRM12': 'B/W 12',     +
-#  'smP3': 'P3',           ?
-#  'smP5': 'P5',           ?
-#  'smP7': 'P7',           ?
-#  'smAVT': 'AVT 90',      ?
+#  'smP3': 'P3',           +
+#  'smP5': 'P5',           +
+#  'smP7': 'P7',           +
+#  'smAVT': 'AVT 90',      +
 #
 #
 # narrow

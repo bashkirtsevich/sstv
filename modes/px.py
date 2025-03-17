@@ -6,25 +6,25 @@ class PXMeta(ModeMetaclass):
         cls.CHAN_TIME = cls.SCAN_TIME
 
         cls.CHAN_OFFSETS = [cls.SYNC_PULSE + cls.SYNC_PORCH]
-        cls.CHAN_OFFSETS.append(cls.CHAN_OFFSETS[0] + cls.CHAN_TIME)
-        cls.CHAN_OFFSETS.append(cls.CHAN_OFFSETS[1] + cls.CHAN_TIME)
+        cls.CHAN_OFFSETS.append(cls.CHAN_OFFSETS[0] + cls.CHAN_TIME + cls.SYNC_PORCH)
+        cls.CHAN_OFFSETS.append(cls.CHAN_OFFSETS[1] + cls.CHAN_TIME + cls.SYNC_PORCH)
 
-        cls.LINE_TIME = cls.SYNC_PULSE + cls.CHAN_COUNT * cls.CHAN_TIME
+        cls.LINE_TIME = cls.SYNC_PULSE + cls.SYNC_PORCH * 4 + cls.CHAN_COUNT * cls.CHAN_TIME
         cls.PIXEL_TIME = cls.SCAN_TIME / cls.LINE_WIDTH
 
         cls.TIMING_SEQUENCE = [
             Tone(1200, cls.SYNC_PULSE),
             Tone(1500, cls.SYNC_PORCH),
             Channel(0, cls.PIXEL_TIME),
+            Tone(1500, cls.SYNC_PORCH),
             Channel(1, cls.PIXEL_TIME),
+            Tone(1500, cls.SYNC_PORCH),
             Channel(2, cls.PIXEL_TIME),
             Tone(1500, cls.SYNC_PORCH),
         ]
 
 
 class PXAbstract(ModeWide):
-    VIS_COUNT = 1
-
     COLOR = ColorScheme.RGB
     LINE_WIDTH = 640
     LINE_COUNT = 496

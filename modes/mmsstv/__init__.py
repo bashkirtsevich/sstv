@@ -36,7 +36,6 @@ __all__ = [
 #     NAME = "MMSSTV MP73-N"
 #
 #     VIS_CODE = 2
-#     VIS_COUNT = 1
 #     NARROW = True
 #
 #     COLOR = ColorScheme.YUV

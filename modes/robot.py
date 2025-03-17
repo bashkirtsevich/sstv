@@ -5,7 +5,6 @@ class Robot24(ModeWide):
     NAME = "Robot 24"
 
     VIS_CODE = 4
-    VIS_COUNT = 1
 
     COLOR = ColorScheme.YUV
     LINE_WIDTH = 160
@@ -53,7 +52,6 @@ class Robot36(ModeWide):
     NAME = "Robot 36"
 
     VIS_CODE = 8
-    VIS_COUNT = 1
 
     COLOR = ColorScheme.YUV
     LINE_WIDTH = 320
