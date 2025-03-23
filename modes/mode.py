@@ -94,19 +94,31 @@ class ModeMetaclass(abc.ABCMeta):
 
 
 class ModeAbstract(metaclass=ModeMetaclass):
-    @staticmethod
-    @abc.abstractmethod
-    def color_to_freq(color: Color) -> float:
-        return None
+    @classmethod
+    def color_to_freq(cls, color: Color) -> float:
+        return color * (cls.FREQ_HIGH - cls.FREQ_LOW) / 255 + cls.FREQ_LOW
+
+    @classmethod
+    def freq_to_color(cls, freq: float) -> Color:
+        lum = int(round((freq - cls.FREQ_LOW) / ((cls.FREQ_HIGH - cls.FREQ_LOW) / 255)))
+        return min(max(lum, 0), 255)
 
 
 class ModeWide(ModeAbstract):
-    @staticmethod
-    def color_to_freq(color: Color) -> float:
-        return color * (2300 - 1500) / 255 + 1500
+    FREQ_LOW = 1500
+    FREQ_HIGH = 2300
+
+    FREQ_SYNC_PULSE = 1200
+    FREQ_SYNC_PORCH = 1500
+
+    FREQ_SYNC_MEDIAN = (FREQ_SYNC_PULSE + FREQ_SYNC_PORCH) / 2
 
 
 class ModeNarrow(ModeAbstract):
-    @staticmethod
-    def color_to_freq(color: Color) -> float:
-        return color * NARROW_BW / 255 + NARROW_LOW
+    FREQ_LOW = 2044
+    FREQ_HIGH = 2300
+
+    FREQ_SYNC_PULSE = 1200
+    FREQ_SYNC_PORCH = 2044
+
+    FREQ_SYNC_MEDIAN = (FREQ_SYNC_PULSE + FREQ_SYNC_PORCH) / 2

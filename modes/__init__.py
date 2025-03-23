@@ -6,10 +6,13 @@ from .mmsstv import MMSSTVML180
 from .mmsstv import MMSSTVML240
 from .mmsstv import MMSSTVML280
 from .mmsstv import MMSSTVML320
-from .mmsstv import MMSSTVMP115
-from .mmsstv import MMSSTVMP140
-from .mmsstv import MMSSTVMP175
-from .mmsstv import MMSSTVMP73
+from .mmsstv import MMSSTVMPN110
+from .mmsstv import MMSSTVMPN140
+from .mmsstv import MMSSTVMPN73
+from .mmsstv import MMSSTVMPW115
+from .mmsstv import MMSSTVMPW140
+from .mmsstv import MMSSTVMPW175
+from .mmsstv import MMSSTVMPW73
 from .mmsstv import MMSSTVMR115
 from .mmsstv import MMSSTVMR140
 from .mmsstv import MMSSTVMR175
@@ -35,16 +38,14 @@ from .scottie import Scottie1
 from .scottie import Scottie2
 from .scottie import ScottieDX
 
-CODECS = [
+WIDE_CODECS = [
     Amiga90,
 
     Martin1, Martin2,
 
     MMSSTVMR73, MMSSTVMR90, MMSSTVMR115, MMSSTVMR140, MMSSTVMR175,
-    MMSSTVMP73, MMSSTVMP115, MMSSTVMP140, MMSSTVMP175,
+    MMSSTVMPW73, MMSSTVMPW115, MMSSTVMPW140, MMSSTVMPW175,
     MMSSTVML180, MMSSTVML240, MMSSTVML280, MMSSTVML320,
-
-    # MMSSTV73N,
 
     P3, P5, P7,
 
@@ -58,12 +59,21 @@ CODECS = [
     Scottie1, Scottie2, ScottieDX,
 ]
 
-CODEC_MAP = {
+NARROW_CODECS = [
+    MMSSTVMPN110, MMSSTVMPN140, MMSSTVMPN73,
+]
+
+WIDE_CODEC_MAP = {
     codec.NAME: codec
-    for codec in CODECS
+    for codec in WIDE_CODECS
 }
 
-VIS_MAP = {
+WIDE_VIS_MAP = {
     codec.VIS_CODE: codec
-    for codec in CODECS
+    for codec in WIDE_CODECS
+}
+
+NARROW_VIS_MAP = {
+    codec.VIS_CODE: codec
+    for codec in NARROW_CODECS
 }

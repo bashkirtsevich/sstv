@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image
 from scipy.signal.windows import hann
 
-from modes import VIS_MAP
+from modes import WIDE_VIS_MAP, NARROW_VIS_MAP
 from modes.mode import ColorScheme, Tone, Channel, LineSwitch, ModeWide, ModeNarrow, ToneGenerator
 
 BREAK_OFFSET = 0.300
@@ -23,11 +23,20 @@ VIS_BIT_SIZE = 0.030
 Signal = typing.List[float]
 SignalGen = typing.Generator[float, None, None]
 
+HEADER_WIDE = [
+    Tone(1900, 0.3),
+    Tone(1200, 0.01),
+    Tone(1900, 0.3),
+    Tone(1200, 0.03),
+]
 
-def calc_lum(freq):
-    # lum = int(round((freq - 1500) / 3.1372549))
-    lum = int(round((freq - 1500) / ((2300 - 1500) / 255)))
-    return min(max(lum, 0), 255)
+HEADER_NARROW = [
+    Tone(1900, 0.3),
+    Tone(2100, 0.1),
+    Tone(1900, 0.022)
+]
+
+HEADERS = [HEADER_WIDE, HEADER_NARROW]
 
 
 def barycentric_peak_interp(bins, x):
@@ -50,15 +59,26 @@ class SSTVDecoder:
         self.sample_rate = sample_rate
 
     def decode(self, signal: Signal) -> Image:
-        if not (header := self._find_header(signal)):
+        if not (header := self._find_header(HEADERS, signal)):
             return None
 
-        hdr_start, hdr_len = header
+        hdr_idx, hdr_start, hdr_len = header
         header_end = hdr_start + hdr_len
 
-        mode, bit_len = self._decode_vis(signal, header_end)
+        match hdr_idx:
+            case 0:
+                decoder = self._decode_vis_wide
+                bit_time = 0.030
+            case 1:
+                decoder = self._decode_vis_narrow
+                bit_time = 0.022
+            case _:
+                raise ValueError("Unsupported header type")
 
-        vis_len = VIS_BIT_SIZE * (bit_len + 1) * self.sample_rate
+        mode, bit_len = decoder(signal, header_end, bit_time)
+
+        # vis_len = VIS_BIT_SIZE * (bit_len + 1) * self.sample_rate
+        vis_len = bit_time * (bit_len + 1) * self.sample_rate
 
         vis_count = getattr(mode, "VIS_COUNT", 1)
         vis_end = hdr_start + (vis_len + hdr_len) * vis_count
@@ -67,7 +87,7 @@ class SSTVDecoder:
 
         return self._draw_image(mode, image_data)
 
-    def _peak_fft_freq(self, signal: Signal):
+    def _peak_fft_freq(self, signal: Signal) -> float:
         windowed_data = signal * hann(len(signal))
         fft = np.abs(np.fft.rfft(windowed_data))
 
@@ -79,55 +99,58 @@ class SSTVDecoder:
         # Return frequency in hz
         return peak * self.sample_rate / len(windowed_data)
 
-    def _find_header(self, signal: Signal) -> typing.Optional[typing.Tuple[int, int]]:
-        header_size = round(HDR_SIZE * self.sample_rate)
-        window_size = round(HDR_WINDOW_SIZE * self.sample_rate)
+    def _find_header(
+            self,
+            headers: typing.List[typing.Iterable[Tone]],
+            signal: Signal,
+            threshold: float = 50.0,
+            stride_time: float = 0.002,
+            window_size: float = 0.010
+    ) -> typing.Optional[typing.Tuple[int, int, int]]:
+        stride_len = round(stride_time * self.sample_rate)  # check every stride_time ms
 
-        # Relative sample offsets of the header tones
-        leader_1_sample = 0
-        leader_1_search = leader_1_sample + window_size
+        stamps = []
+        for header in headers:
+            hdr_size = round(sum(tone.time for tone in header) * self.sample_rate)
+            # The margin of error created here will be negligible when decoding the
+            # vis due to each bit having a length of 30ms. We fix this error margin
+            # when decoding the image by aligning each sync pulse
 
-        break_sample = round(BREAK_OFFSET * self.sample_rate)
-        break_search = break_sample + window_size
+            areas = []
+            time_acc = 0
+            for it in header:
+                area = slice(
+                    round(time_acc * self.sample_rate),
+                    round((time_acc + window_size) * self.sample_rate)
+                )
+                areas.append((area, it.freq))
+                time_acc += it.time
 
-        leader_2_sample = round(LEADER_OFFSET * self.sample_rate)
-        leader_2_search = leader_2_sample + window_size
+            stamps.append((hdr_size, areas))
 
-        vis_start_sample = round(VIS_START_OFFSET * self.sample_rate)
-        vis_start_search = vis_start_sample + window_size
+        for curr_sample in range(0, len(signal), stride_len):
+            for header_idx, (header_size, slices) in enumerate(stamps):
+                if curr_sample + header_size >= len(signal):
+                    continue
 
-        jump_size = round(0.002 * self.sample_rate)  # check every 2ms
+                # Update search progress message
+                if curr_sample % (stride_len * 256) == 0:
+                    progress = curr_sample / self.sample_rate
+                    print(f"Searching for calibration header... {progress:.1f}s")
 
-        # The margin of error created here will be negligible when decoding the
-        # vis due to each bit having a length of 30ms. We fix this error margin
-        # when decoding the image by aligning each sync pulse
+                search_area = signal[curr_sample:curr_sample + header_size]
 
-        for current_sample in range(0, len(signal) - header_size, jump_size):
-            # Update search progress message
-            if current_sample % (jump_size * 256) == 0:
-                search_msg = "Searching for calibration header... {:.1f}s"
-                progress = current_sample / self.sample_rate
-                print(search_msg.format(progress))
-
-            search_end = current_sample + header_size
-            search_area = signal[current_sample:search_end]
-
-            leader_1_area = search_area[leader_1_sample:leader_1_search]
-            break_area = search_area[break_sample:break_search]
-            leader_2_area = search_area[leader_2_sample:leader_2_search]
-            vis_start_area = search_area[vis_start_sample:vis_start_search]
-
-            # Check they're the correct frequencies
-            if (abs(self._peak_fft_freq(leader_1_area) - 1900) < 50
-                    and abs(self._peak_fft_freq(break_area) - 1200) < 50
-                    and abs(self._peak_fft_freq(leader_2_area) - 1900) < 50
-                    and abs(self._peak_fft_freq(vis_start_area) - 1200) < 50):
-                stop_msg = "Searching for calibration header... Found!{:>4}"
-                print(stop_msg.format(' '))
-                return current_sample, header_size
+                # Check they're the correct frequencies
+                if all(abs(self._peak_fft_freq(search_area[part]) - freq) < threshold for part, freq in slices):
+                    print("Searching for calibration header... Found!")
+                    return header_idx, curr_sample, header_size
 
         print("Couldn't find SSTV header in the given audio file")
         return None
+
+    @staticmethod
+    def _bit_to_int(bits: typing.List[int]) -> int:
+        return reduce(lambda value, bit: (value << 1) | (bit & 1), bits[::-1])
 
     def _decode_vis_value(self, vis_bits: typing.List[int]) -> typing.Tuple[int, int]:
         # Check for even parity in last bit
@@ -138,14 +161,14 @@ class SSTVDecoder:
                 continue
 
             # LSB first so we must reverse and ignore the parity bit
-            return reduce(lambda value, bit: (value << 1) | bit, vis[-2::-1]), bit_len
+            return self._bit_to_int(vis[:-1]), bit_len
 
         raise ValueError("Error decoding VIS header (invalid parity bit)")
 
-    def _decode_vis(self, signal: Signal, vis_start: int) -> tuple:
+    def _decode_vis_wide(self, signal: Signal, vis_start: int, bit_time: float = 0.030) -> tuple:
         """Decodes the vis from the audio data and returns the SSTV mode"""
 
-        bit_size = round(VIS_BIT_SIZE * self.sample_rate)
+        bit_size = round(bit_time * self.sample_rate)
         vis_bits = []
 
         # FIXME: Read 8 and 16 bit vis at the same time
@@ -157,9 +180,33 @@ class SSTVDecoder:
             vis_bits.append(int(freq <= 1200))
 
         vis_value, bit_len = self._decode_vis_value(vis_bits)
-        if mode := VIS_MAP.get(vis_value):
+        if mode := WIDE_VIS_MAP.get(vis_value):
             print("Detected SSTV mode {}".format(mode.NAME))
             return mode, bit_len
+
+        error = "SSTV mode is unsupported (VIS: {})"
+        raise ValueError(error.format(vis_value))
+
+    def _decode_vis_narrow(self, signal: Signal, vis_start: int, bit_time: float = 0.022) -> tuple:
+        """Decodes the vis from the audio data and returns the SSTV mode"""
+        bit_size = round(bit_time * self.sample_rate)
+        vis_bits = []
+
+        for bit_idx in range(4 * 6):
+            bit_offset = vis_start + bit_idx * bit_size
+            section = signal[bit_offset:bit_offset + bit_size]
+            freq = self._peak_fft_freq(section)
+            # 1900 hz = 1, 2100hz = 0
+            vis_bits.append(int(freq <= 2000))
+
+        vis1, vis2, vis_value, vis4 = (self._bit_to_int(vis_bits[g * 6:g * 6 + 6]) for g in range(4))
+
+        if vis1 != 0x2d or vis2 != 0x15 or vis_value ^ vis2 != vis4:
+            raise ValueError(f"Invalid VIS quadruplet ({vis1}, {vis2}, {vis_value}, {vis4})")
+
+        if mode := NARROW_VIS_MAP.get(vis_value):
+            print("Detected SSTV mode {}".format(mode.NAME))
+            return mode, 24
 
         error = "SSTV mode is unsupported (VIS: {})"
         raise ValueError(error.format(vis_value))
@@ -176,10 +223,9 @@ class SSTVDecoder:
             return None  # Reached end of audio
 
         for current_sample in range(align_start, align_stop):
-            section_end = current_sample + sync_window
-            search_section = signal[current_sample:section_end]
+            search_section = signal[current_sample:current_sample + sync_window]
 
-            if self._peak_fft_freq(search_section) > 1350:
+            if self._peak_fft_freq(search_section) > mode.FREQ_SYNC_MEDIAN:
                 break
 
         end_sync = current_sample + sync_window // 2
@@ -250,7 +296,7 @@ class SSTVDecoder:
                     pixel_area = signal[px_pos:px_end]
                     freq = self._peak_fft_freq(pixel_area)
 
-                    image_data[line][chan][px] = calc_lum(freq)
+                    image_data[line][chan][px] = mode.freq_to_color(freq)
 
         return image_data
 

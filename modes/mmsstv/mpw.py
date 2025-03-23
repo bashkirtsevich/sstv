@@ -1,7 +1,7 @@
 from modes.mode import ModeMetaclass, Tone, Channel, LineSwitch, ModeWide, ColorScheme
 
 
-class MMSSTVMPMeta(ModeMetaclass):
+class MMSSTVMPWMeta(ModeMetaclass):
     def init_fields(cls):
         cls.CHAN_TIME = cls.SCAN_TIME + cls.SEP_PULSE
 
@@ -24,7 +24,7 @@ class MMSSTVMPMeta(ModeMetaclass):
         ]
 
 
-class MMSSTVMPAbstract(ModeWide):
+class MMSSTVMPWAbstract(ModeWide):
     COLOR = ColorScheme.YUV
     LINE_WIDTH = 320
     LINE_COUNT = 256
@@ -44,25 +44,25 @@ class MMSSTVMPAbstract(ModeWide):
     HAS_ALT_SCAN = False
 
 
-class MMSSTVMP73(MMSSTVMPAbstract, metaclass=MMSSTVMPMeta):
+class MMSSTVMPW73(MMSSTVMPWAbstract, metaclass=MMSSTVMPWMeta):
     NAME = "MMSSTV MP73"
     VIS_CODE = 0x2523
     SCAN_TIME = 0.140000  # sec
 
 
-class MMSSTVMP115(MMSSTVMPAbstract, metaclass=MMSSTVMPMeta):
+class MMSSTVMPW115(MMSSTVMPWAbstract, metaclass=MMSSTVMPWMeta):
     NAME = "MMSSTV MP115"
     VIS_CODE = 0x2923
     SCAN_TIME = 0.223000  # sec
 
 
-class MMSSTVMP140(MMSSTVMPAbstract, metaclass=MMSSTVMPMeta):
+class MMSSTVMPW140(MMSSTVMPWAbstract, metaclass=MMSSTVMPWMeta):
     NAME = "MMSSTV MP140"
     VIS_CODE = 0x2a23
     SCAN_TIME = 0.270000  # sec
 
 
-class MMSSTVMP175(MMSSTVMPAbstract, metaclass=MMSSTVMPMeta):
+class MMSSTVMPW175(MMSSTVMPWAbstract, metaclass=MMSSTVMPWMeta):
     NAME = "MMSSTV MP175"
     VIS_CODE = 0x2c23
     SCAN_TIME = 0.340000  # sec
