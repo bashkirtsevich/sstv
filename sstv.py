@@ -10,30 +10,25 @@ from scipy.signal.windows import hann
 from modes import WIDE_VIS_MAP, NARROW_VIS_MAP
 from modes.mode import ColorScheme, Tone, Channel, LineSwitch, ModeWide, ModeNarrow, ToneGenerator
 
-BREAK_OFFSET = 0.300
-LEADER_OFFSET = 0.010 + BREAK_OFFSET
-VIS_START_OFFSET = 0.300 + LEADER_OFFSET
+HDR_TONE_DURATION = 0.100000
 
-HDR_TONE_DURATION = 0.1
-HDR_SIZE = 0.030 + VIS_START_OFFSET
-HDR_WINDOW_SIZE = 0.010
-
-VIS_BIT_SIZE = 0.030
+VIS_WIDE_BIT_SIZE = 0.030000
+VIS_NARROW_BIT_SIZE = 0.022000
 
 Signal = typing.List[float]
 SignalGen = typing.Generator[float, None, None]
 
 HEADER_WIDE = [
-    Tone(1900, 0.3),
-    Tone(1200, 0.01),
-    Tone(1900, 0.3),
-    Tone(1200, 0.03),
+    Tone(1900, 0.300000),
+    Tone(1200, 0.010000),
+    Tone(1900, 0.300000),
+    Tone(1200, 0.030000),
 ]
 
 HEADER_NARROW = [
-    Tone(1900, 0.3),
-    Tone(2100, 0.1),
-    Tone(1900, 0.022)
+    Tone(1900, 0.300000),
+    Tone(2100, 0.100000),
+    Tone(1900, 0.022000)
 ]
 
 HEADERS = [HEADER_WIDE, HEADER_NARROW]
@@ -68,17 +63,17 @@ class SSTVDecoder:
         match hdr_idx:
             case 0:
                 decoder = self._decode_vis_wide
-                bit_time = 0.030
+                bit_time = VIS_WIDE_BIT_SIZE
             case 1:
                 decoder = self._decode_vis_narrow
-                bit_time = 0.022
+                bit_time = VIS_NARROW_BIT_SIZE
             case _:
                 raise ValueError("Unsupported header type")
 
-        mode, bit_len = decoder(signal, header_end, bit_time)
+        mode, bit_len = decoder(signal, header_end)
 
         # vis_len = VIS_BIT_SIZE * (bit_len + 1) * self.sample_rate
-        vis_len = bit_time * (bit_len + 1) * self.sample_rate
+        vis_len = bit_time * bit_len * self.sample_rate
 
         vis_count = getattr(mode, "VIS_COUNT", 1)
         vis_end = hdr_start + (vis_len + hdr_len) * vis_count
@@ -165,7 +160,7 @@ class SSTVDecoder:
 
         raise ValueError("Error decoding VIS header (invalid parity bit)")
 
-    def _decode_vis_wide(self, signal: Signal, vis_start: int, bit_time: float = 0.030) -> tuple:
+    def _decode_vis_wide(self, signal: Signal, vis_start: int, bit_time: float = VIS_WIDE_BIT_SIZE) -> tuple:
         """Decodes the vis from the audio data and returns the SSTV mode"""
 
         bit_size = round(bit_time * self.sample_rate)
@@ -187,7 +182,7 @@ class SSTVDecoder:
         error = "SSTV mode is unsupported (VIS: {})"
         raise ValueError(error.format(vis_value))
 
-    def _decode_vis_narrow(self, signal: Signal, vis_start: int, bit_time: float = 0.022) -> tuple:
+    def _decode_vis_narrow(self, signal: Signal, vis_start: int, bit_time: float = VIS_NARROW_BIT_SIZE) -> tuple:
         """Decodes the vis from the audio data and returns the SSTV mode"""
         bit_size = round(bit_time * self.sample_rate)
         vis_bits = []
@@ -432,10 +427,10 @@ class SSTVEncoder:
             vis |= (vis.bit_count() & 1) << fsk_len - 1  # Parity bit
 
             for _ in range(fsk_len):
-                yield (1100 if vis & 1 else 1300, VIS_BIT_SIZE)
+                yield (1100 if vis & 1 else 1300, VIS_WIDE_BIT_SIZE)
                 vis >>= 1
 
-            yield (1200, VIS_BIT_SIZE)
+            yield (1200, VIS_WIDE_BIT_SIZE)
 
     def _encode_image_data(self, image, mode) -> SignalGen:
         height = mode.LINE_COUNT
