@@ -1,6 +1,5 @@
 import math
 import typing
-from functools import reduce
 from itertools import chain
 
 import numpy as np
@@ -9,6 +8,7 @@ from scipy.signal.windows import hann
 
 from modes import WIDE_VIS_MAP, NARROW_VIS_MAP
 from modes.mode import ColorScheme, Tone, Channel, LineSwitch, ModeWide, ModeNarrow, ToneGenerator
+from utils import bit_to_int, barycentric_peak_interp
 
 HDR_TONE_DURATION = 0.100000
 
@@ -32,21 +32,6 @@ HEADER_NARROW = [
 ]
 
 HEADERS = [HEADER_WIDE, HEADER_NARROW]
-
-
-def barycentric_peak_interp(bins, x):
-    # Takes x as the index of the largest bin and interpolates the
-    # x value of the peak using neighbours in the bins array
-
-    # Make sure data is in bounds
-    y1 = bins[x] if x <= 0 else bins[x - 1]
-    y3 = bins[x] if x + 1 >= len(bins) else bins[x + 1]
-
-    denom = y3 + bins[x] + y1
-    if denom == 0:
-        return 0  # erroneous
-
-    return (y3 - y1) / denom + x
 
 
 class SSTVDecoder:
@@ -143,10 +128,6 @@ class SSTVDecoder:
         print("Couldn't find SSTV header in the given audio file")
         return None
 
-    @staticmethod
-    def _bit_to_int(bits: typing.List[int]) -> int:
-        return reduce(lambda value, bit: (value << 1) | (bit & 1), bits[::-1])
-
     def _decode_vis_value(self, vis_bits: typing.List[int]) -> typing.Tuple[int, int]:
         # Check for even parity in last bit
         for bit_len in (16, 8):
@@ -156,7 +137,7 @@ class SSTVDecoder:
                 continue
 
             # LSB first so we must reverse and ignore the parity bit
-            return self._bit_to_int(vis[:-1]), bit_len
+            return bit_to_int(vis[:-1]), bit_len
 
         raise ValueError("Error decoding VIS header (invalid parity bit)")
 
@@ -194,7 +175,7 @@ class SSTVDecoder:
             # 1900 hz = 1, 2100hz = 0
             vis_bits.append(int(freq <= 2000))
 
-        vis1, vis2, vis_value, vis4 = (self._bit_to_int(vis_bits[g * 6:g * 6 + 6]) for g in range(4))
+        vis1, vis2, vis_value, vis4 = (bit_to_int(vis_bits[g * 6:g * 6 + 6]) for g in range(4))
 
         if vis1 != 0x2d or vis2 != 0x15 or vis_value ^ vis2 != vis4:
             raise ValueError(f"Invalid VIS quadruplet ({vis1}, {vis2}, {vis_value}, {vis4})")
