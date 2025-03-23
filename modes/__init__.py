@@ -2,6 +2,9 @@ from .amiga import Amiga90
 from .bw import RobotBW8, RobotBW12
 from .martin import Martin1
 from .martin import Martin2
+from .mmsstv import MMSSTVMCN110
+from .mmsstv import MMSSTVMCN140
+from .mmsstv import MMSSTVMCN180
 from .mmsstv import MMSSTVML180
 from .mmsstv import MMSSTVML240
 from .mmsstv import MMSSTVML280
@@ -61,6 +64,7 @@ WIDE_CODECS = [
 
 NARROW_CODECS = [
     MMSSTVMPN110, MMSSTVMPN140, MMSSTVMPN73,
+    MMSSTVMCN110, MMSSTVMCN140, MMSSTVMCN180,
 ]
 
 WIDE_CODEC_MAP = {
