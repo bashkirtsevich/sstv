@@ -144,7 +144,7 @@ class SSTVDecoder:
 
         if mode := NARROW_VIS_MAP.get(vis_value):
             print(f"Detected SSTV mode {mode.NAME}")
-            return mode, bit_count
+            return mode, bit_groups * bit_count
 
         raise ValueError(f"SSTV mode is unsupported (VIS: {vis_value})")
 
