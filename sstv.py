@@ -159,6 +159,7 @@ class SSTVDecoder:
         if align_stop <= align_start:
             return None  # Reached end of audio
 
+        current_sample = align_start
         for current_sample in range(align_start, align_stop):
             search_section = signal[current_sample:current_sample + sync_window]
 
