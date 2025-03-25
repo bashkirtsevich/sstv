@@ -1,6 +1,7 @@
 import abc
 import typing
 from enum import Enum
+from statistics import median
 
 # https://radio.clubs.etsit.upm.es/blog/2019-08-10-sstv-scottie1-encoder/
 
@@ -111,7 +112,7 @@ class ModeWide(ModeAbstract):
     FREQ_SYNC_PULSE = 1200
     FREQ_SYNC_PORCH = 1500
 
-    FREQ_SYNC_MEDIAN = (FREQ_SYNC_PULSE + FREQ_SYNC_PORCH) / 2
+    FREQ_SYNC_MEDIAN = median([FREQ_SYNC_PULSE, FREQ_SYNC_PORCH])
 
 
 class ModeNarrow(ModeAbstract):
@@ -121,4 +122,4 @@ class ModeNarrow(ModeAbstract):
     FREQ_SYNC_PULSE = 1200
     FREQ_SYNC_PORCH = 2044
 
-    FREQ_SYNC_MEDIAN = (FREQ_SYNC_PULSE + FREQ_SYNC_PORCH) / 2
+    FREQ_SYNC_MEDIAN = median([FREQ_SYNC_PULSE, FREQ_SYNC_PORCH])
