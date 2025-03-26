@@ -1,32 +1,69 @@
 import math
+import statistics
 import typing
 from itertools import chain
 
 from PIL import Image
 
 from modes import WIDE_VIS_MAP, NARROW_VIS_MAP
-from modes.mode import ColorScheme, Tone, Channel, LineSwitch, ModeWide, ModeNarrow, ToneGenerator
+from modes.mode import ColorScheme, Tone, Channel, LineSwitch, ModeWide, ModeNarrow, ToneGenerator, ModeAbstract
 from utils import bits_to_int, peak_fft_freq, Signal, SignalGen, read_bits, tones_to_slices, match_frequencies
 
-HDR_TONE_DURATION = 0.100000
-
-VIS_WIDE_BIT_SIZE = 0.030000
-VIS_NARROW_BIT_SIZE = 0.022000
+ID_WIDE = 0
+ID_NARROW = 1
 
 HEADER_WIDE = [
+    Tone(1900, 0.100000),
+    Tone(1500, 0.100000),
+    Tone(1900, 0.100000),
+    Tone(1500, 0.100000),
+    Tone(2300, 0.100000),
+    Tone(1500, 0.100000),
+    Tone(2300, 0.100000),
+    Tone(1500, 0.100000),
+]
+
+HEADER_NARROW = [
+    Tone(1900, 0.100000),
+    Tone(2300, 0.100000),
+    Tone(1900, 0.100000),
+    Tone(2300, 0.100000),
+]
+
+HEADERS = {
+    ID_WIDE: HEADER_WIDE,
+    ID_NARROW: HEADER_NARROW,
+}
+
+BIT_1_WIDE_FREQ = 1100
+BIT_0_WIDE_FREQ = 1300
+VIS_WIDE_BIT_SIZE = 0.030000
+VIS_BIT_TONE_WIDE = Tone((BIT_0_WIDE_FREQ, BIT_1_WIDE_FREQ), VIS_WIDE_BIT_SIZE)
+VIS_BIT_TONE_MEDIAN_WIDE = Tone(statistics.median([BIT_0_WIDE_FREQ, BIT_1_WIDE_FREQ]), VIS_WIDE_BIT_SIZE)
+
+BIT_1_NARROW_FREQ = 1900
+BIT_0_NARROW_FREQ = 2100
+VIS_NARROW_BIT_SIZE = 0.022000
+VIS_BIT_TONE_NARROW = Tone((BIT_0_NARROW_FREQ, BIT_1_NARROW_FREQ), VIS_NARROW_BIT_SIZE)
+VIS_BIT_TONE_MEDIAN_NARROW = Tone(statistics.median([BIT_0_NARROW_FREQ, BIT_1_NARROW_FREQ]), VIS_NARROW_BIT_SIZE)
+
+CALIBRATION_WIDE = [
     Tone(1900, 0.300000),
     Tone(1200, 0.010000),
     Tone(1900, 0.300000),
     Tone(1200, 0.030000),
 ]
 
-HEADER_NARROW = [
+CALIBRATION_NARROW = [
     Tone(1900, 0.300000),
     Tone(2100, 0.100000),
     Tone(1900, 0.022000)
 ]
 
-HEADERS = [HEADER_WIDE, HEADER_NARROW]
+CALIBRATIONS = {
+    ID_WIDE: CALIBRATION_WIDE,
+    ID_NARROW: CALIBRATION_NARROW,
+}
 
 
 class SSTVDecoder:
@@ -34,21 +71,22 @@ class SSTVDecoder:
         self.sample_rate = sample_rate
 
     def decode(self, signal: Signal) -> Image:
-        if not (header := self._find_header(HEADERS, signal)):
+        if not (header := self._find_header(CALIBRATIONS, signal)):
             return None
 
         hdr_idx, hdr_start, hdr_len = header
         header_end = hdr_start + hdr_len
 
-        match hdr_idx:
-            case 0:
-                decoder = self._decode_vis_wide
-                bit_time = VIS_WIDE_BIT_SIZE
-            case 1:
-                decoder = self._decode_vis_narrow
-                bit_time = VIS_NARROW_BIT_SIZE
-            case _:
-                raise ValueError("Unsupported header type")
+        if hdr_idx == ID_WIDE:
+            decoder = self._decode_vis_wide
+            bit_time = VIS_WIDE_BIT_SIZE
+
+        elif hdr_idx == ID_NARROW:
+            decoder = self._decode_vis_narrow
+            bit_time = VIS_NARROW_BIT_SIZE
+
+        else:
+            raise ValueError("Unsupported header type")
 
         mode, bit_len = decoder(signal, header_end)
 
@@ -64,7 +102,7 @@ class SSTVDecoder:
 
     def _find_header(
             self,
-            headers: typing.Iterable[typing.Iterable[Tone]],
+            headers: typing.Mapping[int, typing.Iterable[Tone]],
             signal: Signal,
             threshold: float = 50.0,
             stride_time: float = 0.002,
@@ -72,13 +110,13 @@ class SSTVDecoder:
     ) -> typing.Optional[typing.Tuple[int, int, int]]:
         stride_len = round(stride_time * self.sample_rate)  # check every stride_time ms
 
-        stamps = [
-            tones_to_slices(header, self.sample_rate, window_size)
-            for header in headers
-        ]
+        stamps = {
+            header_id: tones_to_slices(header, self.sample_rate, window_size)
+            for header_id, header in headers.items()
+        }
 
         for curr_sample in range(0, len(signal), stride_len):
-            for header_idx, (header_size, slices) in enumerate(stamps):
+            for header_id, (header_size, slices) in stamps.items():
                 if curr_sample + header_size >= len(signal):
                     continue
 
@@ -91,7 +129,7 @@ class SSTVDecoder:
 
                 if match_frequencies(search_area, slices, self.sample_rate, threshold=threshold):
                     print("Searching for calibration header... Found!")
-                    return header_idx, curr_sample, header_size
+                    return header_id, curr_sample, header_size
 
         print("Couldn't find SSTV header in the given audio file")
         return None
@@ -101,7 +139,7 @@ class SSTVDecoder:
         vis_bits = list(
             read_bits(
                 signal, 16, bit_time,
-                freq_true=1100.0, freq_false=1300.0,  # FIXME: Use named constants
+                freq_true=BIT_1_WIDE_FREQ, freq_false=BIT_0_WIDE_FREQ,
                 sample_rate=self.sample_rate, offset=vis_start
             )
         )
@@ -130,7 +168,7 @@ class SSTVDecoder:
         vis_bits = list(
             read_bits(
                 signal, bit_groups * bit_count, bit_time,
-                freq_true=1900.0, freq_false=2100.0,  # FIXME: Use named constants
+                freq_true=BIT_1_NARROW_FREQ, freq_false=BIT_0_NARROW_FREQ,
                 sample_rate=self.sample_rate, offset=vis_start
             )
         )
@@ -333,47 +371,53 @@ class SSTVEncoder:
             offset += (sample + 1) * freq_factor
             samples -= tx
 
-    def _encode_header(self, mode) -> SignalGen:
+    @staticmethod
+    def _yield_tones(tones) -> SignalGen:
+        for tone in tones:
+            yield (tone.freq, tone.time)
+
+    def _encode_header(self, mode: typing.Type[ModeAbstract]) -> SignalGen:
         if issubclass(mode, ModeWide):
-            tones = [1900, 1500, 1900, 1500, 2300, 1500, 2300, 1500, ]
+            header = HEADERS[ID_WIDE]
         elif issubclass(mode, ModeNarrow):
-            tones = [1900, 2300, 1900, 2300, ]
+            header = HEADERS[ID_NARROW]
         else:
             raise TypeError("Unsupported mode")
 
-        for tone in tones:
-            yield (tone, HDR_TONE_DURATION)
+        yield from self._yield_tones(header)
 
     def _encode_vis(self, mode) -> SignalGen:
-        # if mode.NARROW:
-        #     # fsk = FSK_IDS_NARROW[self.mode]
-        #     #
-        #     # self.write(1900, 300)
-        #     # self.write(FSKSPACE, FSKGARD)
-        #     # self.write(1900, FSKINTVAL)
-        #     # self.write_fsk(0x2d)
-        #     # self.write_fsk(0x15)
-        #     # # FSK
-        #     # self.write_fsk(fsk)
-        #     # self.write_fsk(fsk ^ 0x15)
-        #     pass
-        # else:
-        vis_count = getattr(mode, "VIS_COUNT", 1)
-        for _ in range(vis_count):
-            yield (1900, 0.3)
-            yield (1200, 0.01)
-            yield (1900, 0.3)
-            yield (1200, 0.03)
+        vis = mode.VIS_CODE
 
-            vis = mode.VIS_CODE
+        if issubclass(mode, ModeWide):
+            calibration = CALIBRATIONS[ID_WIDE]
+
             fsk_len = 16 if vis >= 0x100 else 8
             vis |= (vis.bit_count() & 1) << fsk_len - 1  # Parity bit
 
-            for _ in range(fsk_len):
-                yield (1100 if vis & 1 else 1300, VIS_WIDE_BIT_SIZE)
-                vis >>= 1
+            vis_count = getattr(mode, "VIS_COUNT", 1)
+            for _ in range(vis_count):
+                yield from self._yield_tones(calibration)
 
-            yield (1200, VIS_WIDE_BIT_SIZE)
+                value = vis
+                for _ in range(fsk_len):
+                    yield (VIS_BIT_TONE_WIDE.freq[value & 1], VIS_BIT_TONE_WIDE.time)
+                    value >>= 1
+
+                yield (VIS_BIT_TONE_MEDIAN_WIDE.freq, VIS_BIT_TONE_MEDIAN_WIDE.time)
+
+        elif issubclass(mode, ModeNarrow):
+            calibration = CALIBRATIONS[ID_NARROW]
+            yield from self._yield_tones(calibration)
+
+            for part in [0x2d, 0x15, vis, vis ^ 0x15]:
+                value = part
+                for _ in range(6):
+                    yield (VIS_BIT_TONE_NARROW.freq[value & 1], VIS_BIT_TONE_NARROW.time)
+                    value >>= 1
+
+        else:
+            raise TypeError("Unsupported mode")
 
     def _encode_image_data(self, image, mode) -> SignalGen:
         height = mode.LINE_COUNT
