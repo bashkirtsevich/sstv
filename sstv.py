@@ -90,6 +90,9 @@ class SSTVDecoder:
 
         mode, bit_len = decoder(signal, header_end)
 
+        if hdr_idx == ID_WIDE:
+            bit_len += 1
+
         # vis_len = VIS_BIT_SIZE * (bit_len + 1) * self.sample_rate
         vis_len = bit_time * bit_len * self.sample_rate
 
