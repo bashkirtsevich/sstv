@@ -17,8 +17,8 @@ class MMSSTVMRMeta(ModeMetaclass):
         cls.HALF_PIXEL_TIME = cls.HALF_SCAN_TIME / cls.LINE_WIDTH
 
         cls.TIMING_SEQUENCE = [
-            Tone(1200, cls.SYNC_PULSE),
-            Tone(1500, cls.SYNC_PORCH),
+            Tone(cls.FREQ_SYNC_PULSE, cls.SYNC_PULSE),
+            Tone(cls.FREQ_SYNC_PORCH, cls.SYNC_PORCH),
             Channel(0, cls.PIXEL_TIME),
             Tone(0, cls.SEP_PULSE),  # FIXME: instead of 0 tone we should send previous pixel
             Channel(1, cls.HALF_PIXEL_TIME),
