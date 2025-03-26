@@ -10,7 +10,8 @@ class MMSSTVMPNMeta(ModeMetaclass):
         cls.CHAN_OFFSETS.append(cls.CHAN_OFFSETS[1] + cls.CHAN_TIME)
         cls.CHAN_OFFSETS.append(cls.CHAN_OFFSETS[2] + cls.CHAN_TIME)
 
-        cls.LINE_TIME = cls.SYNC_PULSE + cls.SYNC_PORCH * 4 + cls.CHAN_COUNT * cls.CHAN_TIME
+        # cls.LINE_TIME = cls.SYNC_PULSE + cls.SYNC_PORCH  + cls.CHAN_COUNT * cls.CHAN_TIME
+        cls.LINE_TIME = cls.CHAN_OFFSETS[3] + cls.SCAN_TIME
         cls.PIXEL_TIME = cls.SCAN_TIME / cls.LINE_WIDTH
 
         cls.TIMING_SEQUENCE = [
