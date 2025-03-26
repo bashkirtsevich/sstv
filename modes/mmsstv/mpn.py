@@ -15,7 +15,7 @@ class MMSSTVMPNMeta(ModeMetaclass):
         cls.PIXEL_TIME = cls.SCAN_TIME / cls.LINE_WIDTH
 
         cls.TIMING_SEQUENCE = [
-            Tone(1200, cls.SYNC_PULSE),
+            Tone(1900, cls.SYNC_PULSE),
             Tone(2044, cls.SYNC_PORCH),
             Channel(0, cls.PIXEL_TIME),
             Channel(1, cls.PIXEL_TIME),
