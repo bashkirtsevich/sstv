@@ -67,11 +67,6 @@ NARROW_CODECS = [
     MMSSTVMCN110, MMSSTVMCN140, MMSSTVMCN180,
 ]
 
-WIDE_CODEC_MAP = {
-    codec.NAME: codec
-    for codec in WIDE_CODECS
-}
-
 WIDE_VIS_MAP = {
     codec.VIS_CODE: codec
     for codec in WIDE_CODECS
@@ -80,4 +75,9 @@ WIDE_VIS_MAP = {
 NARROW_VIS_MAP = {
     codec.VIS_CODE: codec
     for codec in NARROW_CODECS
+}
+
+CODEC_MAP = {
+    codec.NAME: codec
+    for codec in [*WIDE_CODECS, *NARROW_CODECS]
 }

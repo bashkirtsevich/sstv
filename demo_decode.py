@@ -3,15 +3,17 @@ from scipy.io.wavfile import read
 from sstv import SSTVDecoder
 
 
-def main():
-    path = "examples/signal.wav"
-    sample_rate, signal = read(path)
+def main(wav_path: str, img_path: str):
+    sample_rate, signal = read(wav_path)
 
     decoder = SSTVDecoder(sample_rate)
 
     img = decoder.decode(signal)
-    img.save("examples/demo_out.jpg")
+    img.save(img_path)
 
 
 if __name__ == '__main__':
-    main()
+    main(
+        wav_path="examples/signal.wav",
+        img_path="examples/color-bars.png"
+    )
