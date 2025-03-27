@@ -1,4 +1,4 @@
-from modes.mode import ModeMetaclass, Tone, Channel, ColorScheme, ModeNarrow
+from ..mode import ModeMetaclass, Tone, Channel, ColorScheme, ModeNarrow
 
 
 class MMSSTVMCNMeta(ModeMetaclass):

@@ -1,16 +1,17 @@
-from modes.mode import ModeMetaclass, Tone, Channel, LineSwitch, ModeWide, ColorScheme
+from ..mode import ModeMetaclass, Tone, Channel, LineSwitch, ColorScheme, ModeNarrow
 
 
-class MMSSTVMPWMeta(ModeMetaclass):
+class MMSSTVMPNMeta(ModeMetaclass):
     def init_fields(cls):
-        cls.CHAN_TIME = cls.SCAN_TIME + cls.SEP_PULSE
+        cls.CHAN_TIME = cls.SCAN_TIME
 
         cls.CHAN_OFFSETS = [cls.SYNC_PULSE + cls.SYNC_PORCH]
         cls.CHAN_OFFSETS.append(cls.CHAN_OFFSETS[0] + cls.CHAN_TIME)
         cls.CHAN_OFFSETS.append(cls.CHAN_OFFSETS[1] + cls.CHAN_TIME)
         cls.CHAN_OFFSETS.append(cls.CHAN_OFFSETS[2] + cls.CHAN_TIME)
 
-        cls.LINE_TIME = cls.SYNC_PULSE + cls.CHAN_COUNT * cls.CHAN_TIME
+        # cls.LINE_TIME = cls.SYNC_PULSE + cls.SYNC_PORCH  + cls.CHAN_COUNT * cls.CHAN_TIME
+        cls.LINE_TIME = cls.CHAN_OFFSETS[3] + cls.SCAN_TIME
         cls.PIXEL_TIME = cls.SCAN_TIME / cls.LINE_WIDTH
 
         cls.TIMING_SEQUENCE = [
@@ -24,7 +25,7 @@ class MMSSTVMPWMeta(ModeMetaclass):
         ]
 
 
-class MMSSTVMPWAbstract(ModeWide):
+class MMSSTVMPNAbstract(ModeNarrow):
     COLOR = ColorScheme.YUV
     LINE_WIDTH = 320
     LINE_COUNT = 256
@@ -44,25 +45,19 @@ class MMSSTVMPWAbstract(ModeWide):
     HAS_ALT_SCAN = False
 
 
-class MMSSTVMPW73(MMSSTVMPWAbstract, metaclass=MMSSTVMPWMeta):
-    NAME = "MMSSTV MP73"
-    VIS_CODE = 0x2523
+class MMSSTVMPN73(MMSSTVMPNAbstract, metaclass=MMSSTVMPNMeta):
+    NAME = "MMSSTV MP73-N"
+    VIS_CODE = 2
     SCAN_TIME = 0.140000  # sec
 
 
-class MMSSTVMPW115(MMSSTVMPWAbstract, metaclass=MMSSTVMPWMeta):
-    NAME = "MMSSTV MP115"
-    VIS_CODE = 0x2923
-    SCAN_TIME = 0.223000  # sec
+class MMSSTVMPN110(MMSSTVMPNAbstract, metaclass=MMSSTVMPNMeta):
+    NAME = "MMSSTV MP110-N"
+    VIS_CODE = 4
+    SCAN_TIME = 0.212000  # sec
 
 
-class MMSSTVMPW140(MMSSTVMPWAbstract, metaclass=MMSSTVMPWMeta):
-    NAME = "MMSSTV MP140"
-    VIS_CODE = 0x2a23
+class MMSSTVMPN140(MMSSTVMPNAbstract, metaclass=MMSSTVMPNMeta):
+    NAME = "MMSSTV MP140-N"
+    VIS_CODE = 5
     SCAN_TIME = 0.270000  # sec
-
-
-class MMSSTVMPW175(MMSSTVMPWAbstract, metaclass=MMSSTVMPWMeta):
-    NAME = "MMSSTV MP175"
-    VIS_CODE = 0x2c23
-    SCAN_TIME = 0.340000  # sec

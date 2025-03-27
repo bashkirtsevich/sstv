@@ -2,8 +2,7 @@ import numpy as np
 from PIL import Image
 from scipy.io.wavfile import write
 
-from modes import CODEC_MAP
-from sstv import SSTVEncoder
+from sstv import CODEC_MAP, SSTVEncoder
 
 
 def main(img_path: str, wav_path: str, mode: str, sample_rate=11025):

@@ -5,7 +5,7 @@ from statistics import median
 import numpy as np
 from scipy.signal.windows import hann
 
-from modes.mode import Tone
+from .modes.mode import Tone
 
 Bit = typing.Literal[0, 1]
 Signal = typing.List[float]

@@ -1,5 +1,5 @@
-from modes.mmsstv.mr import MMSSTVMRMeta
-from modes.mode import ModeWide, ColorScheme
+from ..mmsstv.mr import MMSSTVMRMeta
+from ..mode import ModeWide, ColorScheme
 
 
 class MMSSTVMLAbstract(ModeWide):

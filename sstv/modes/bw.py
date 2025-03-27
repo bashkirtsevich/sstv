@@ -1,4 +1,4 @@
-from modes.mode import ModeMetaclass, Tone, Channel, ModeWide, ColorScheme
+from .mode import ModeMetaclass, Tone, Channel, ModeWide, ColorScheme
 
 
 class RobotBWMeta(ModeMetaclass):
