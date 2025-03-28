@@ -1,10 +1,14 @@
 from scipy.io.wavfile import read
 
 from sstv import SSTVDecoder
+from sstv.bpf import bandpass_filter, butter_bandpass, cheby2_bandpass
 
 
-def main(wav_path: str, img_path: str):
+def main(wav_path: str, img_path: str, bpf: bool = True):
     sample_rate, signal = read(wav_path)
+
+    if bpf:
+        signal = bandpass_filter(signal, cheby2_bandpass, 700, 2700, sample_rate)
 
     decoder = SSTVDecoder(sample_rate)
 
