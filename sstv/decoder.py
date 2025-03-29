@@ -165,7 +165,7 @@ class SSTVDecoder:
         channels = mode.CHAN_COUNT
         width = mode.LINE_WIDTH
         # Use list comprehension to init list so we can return data early
-        image_data = [[[0 for i in range(width)] for j in range(channels)] for k in range(height)]
+        image_data = [[[0 for _ in range(width)] for _ in range(channels)] for _ in range(height)]
 
         seq_start = image_start
         if mode.HAS_START_SYNC:
@@ -222,17 +222,12 @@ class SSTVDecoder:
         return image_data
 
     def _draw_image(self, mode, image_data: typing.List[typing.List[typing.List[int]]]) -> Image:
-        if mode.COLOR == ColorScheme.YUV:
-            col_mode = "YCbCr"
-        else:
-            col_mode = "RGB"
-
         odd_lines = mode.HAS_ODD_LINES
         width = mode.LINE_WIDTH
         height = mode.LINE_COUNT
         channels = mode.CHAN_COUNT
 
-        image = Image.new(col_mode, (width, height))
+        image = Image.new(mode.COLOR.mode_pil(), (width, height))
         pixel_data = image.load()
 
         print("Drawing image data...")
@@ -280,8 +275,7 @@ class SSTVDecoder:
 
             line += 1
 
-        if image.mode != "RGB":
-            image = image.convert("RGB")
+        image = image.convert("RGB")
 
         print("...Done!")
         return image
