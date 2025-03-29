@@ -77,7 +77,7 @@ class SSTVEncoder:
             calibration = CALIBRATIONS[ID_NARROW]
             yield from self._yield_tones(calibration)
 
-            for part in [0x2d, 0x15, vis, vis ^ 0x15]:
+            for part in [VIS_NARROW_PART1, VIS_NARROW_PART2, vis, vis ^ VIS_NARROW_PART1]:
                 value = part
                 for _ in range(6):
                     yield (VIS_BIT_TONE_NARROW.freq[value & 1], VIS_BIT_TONE_NARROW.time)

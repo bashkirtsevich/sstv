@@ -122,7 +122,7 @@ class SSTVDecoder:
             vis_bits[g * bit_count:g * bit_count + bit_count]
         ) for g in range(bit_groups))
 
-        if vis1 != 0x2d or vis2 != 0x15 or vis_value ^ vis2 != vis4:
+        if vis1 != VIS_NARROW_PART1 or vis2 != VIS_NARROW_PART1 or vis_value ^ vis2 != vis4:
             raise ValueError(f"Invalid VIS quadruplet ({vis1}, {vis2}, {vis_value}, {vis4})")
 
         if mode := NARROW_VIS_MAP.get(vis_value):

@@ -14,8 +14,8 @@ class PDMeta(ModeMetaclass):
         cls.PIXEL_TIME = cls.SCAN_TIME / cls.LINE_WIDTH
 
         cls.TIMING_SEQUENCE = [
-            Tone(1200, cls.SYNC_PULSE),
-            Tone(1500, cls.SYNC_PORCH),
+            Tone(cls.FREQ_SYNC_PULSE, cls.SYNC_PULSE),
+            Tone(cls.FREQ_SYNC_PORCH, cls.SYNC_PORCH),
             Channel(0, cls.PIXEL_TIME),
             Channel(1, cls.PIXEL_TIME),
             Channel(2, cls.PIXEL_TIME),

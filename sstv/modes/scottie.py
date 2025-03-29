@@ -13,7 +13,7 @@ class ScottieMeta(ModeMetaclass):
         cls.PIXEL_TIME = cls.SCAN_TIME / cls.LINE_WIDTH
 
         cls.TONE_SEP = Tone(1500, cls.SEP_PULSE)
-        cls.TONE_SYNC = Tone(1200, cls.SYNC_PULSE)
+        cls.TONE_SYNC = Tone(cls.FREQ_SYNC_PULSE, cls.SYNC_PULSE)
 
         cls.TIMING_SEQUENCE = [
             cls.TONE_SEP,
