@@ -1,0 +1,11 @@
+.gitignore
+.DS_Store
+.dockerignore
+.git
+.idea
+demo_decode.py
+demo_encode.py
+Dockerfile
+README.md
+doc/
+examples/
