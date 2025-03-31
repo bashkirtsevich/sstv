@@ -1,6 +1,6 @@
 # HAM SSTV Python implementation
 
-Based on https://github.com/colaclanth/sstv repository.
+Based on [this](https://github.com/colaclanth/sstv) repository.
 
 Supported codecs:
 
