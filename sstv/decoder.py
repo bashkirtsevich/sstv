@@ -9,8 +9,13 @@ from .utils import bits_to_int, peak_fft_freq, Signal, read_bits, tones_to_slice
 
 
 class SSTVDecoder:
-    def __init__(self, sample_rate: int):
+    def __init__(self, sample_rate: int, print_logs: bool = False):
         self.sample_rate = sample_rate
+        self.print_logs = print_logs
+
+    def _log(self, *args, **kwargs):
+        if self.print_logs:
+            print(*args, **kwargs)
 
     def decode(self, signal: Signal) -> Image:
         if not (header := self._find_header(CALIBRATIONS, signal)):
@@ -28,7 +33,7 @@ class SSTVDecoder:
             bit_time = VIS_NARROW_BIT_SIZE
 
         else:
-            raise ValueError("Unsupported header type")
+            raise ValueError(f"Unsupported header type ({hdr_idx})")
 
         mode, bit_len = decoder(signal, header_end)
 
@@ -60,23 +65,25 @@ class SSTVDecoder:
             for header_id, header in headers.items()
         }
 
+        self._log("Searching for SSTV calibration header")
+
         for curr_sample in range(0, len(signal), stride_len):
+            # Update search progress message
+            if curr_sample % (stride_len * 256) == 0:
+                progress = curr_sample / self.sample_rate
+                self._log(f"Skip {progress:.1f}s")
+
             for header_id, (header_size, slices) in stamps.items():
                 if curr_sample + header_size >= len(signal):
                     continue
 
-                # Update search progress message
-                if curr_sample % (stride_len * 256) == 0:
-                    progress = curr_sample / self.sample_rate
-                    print(f"Searching for calibration header... {progress:.1f}s")
-
                 search_area = signal[curr_sample:curr_sample + header_size]
 
                 if match_frequencies(search_area, slices, self.sample_rate, threshold=threshold):
-                    print("Searching for calibration header... Found!")
+                    self._log(f"Calibration SSTV header found at {curr_sample / self.sample_rate:.1f}s")
                     return header_id, curr_sample, header_size
 
-        print("Couldn't find SSTV header in the given audio file")
+        self._log("SSTV header not found")
         return None
 
     def _decode_vis_wide(self, signal: Signal, vis_start: int, bit_time: float = VIS_WIDE_BIT_SIZE) -> tuple:
@@ -99,7 +106,7 @@ class SSTVDecoder:
             # LSB first so we must reverse and ignore the parity bit
             vis_value = bits_to_int(vis[:-1])
             if mode := WIDE_VIS_MAP.get(vis_value):
-                print(f"Detected SSTV mode {mode.NAME}")
+                self._log(f"Detected SSTV mode {mode.NAME}")
                 return mode, bit_len
 
             raise ValueError(f"SSTV mode is unsupported (VIS: {vis_value})")
@@ -123,10 +130,10 @@ class SSTVDecoder:
         ) for g in range(bit_groups))
 
         if vis1 != VIS_NARROW_PART1 or vis2 != VIS_NARROW_PART1 or vis_value ^ vis2 != vis4:
-            raise ValueError(f"Invalid VIS quadruplet ({vis1}, {vis2}, {vis_value}, {vis4})")
+            raise ValueError(f"Invalid VIS quadruplet ({vis1:0x}, {vis2:0x}, {vis_value}, {vis4:0x})")
 
         if mode := NARROW_VIS_MAP.get(vis_value):
-            print(f"Detected SSTV mode {mode.NAME}")
+            self._log(f"Detected SSTV mode {mode.NAME}")
             return mode, bit_groups * bit_count
 
         raise ValueError(f"SSTV mode is unsupported (VIS: {vis_value})")
@@ -191,7 +198,7 @@ class SSTVDecoder:
                     # Align to start of sync pulse
                     seq_start = self._align_sync(signal, mode, seq_start)
                     if seq_start is None:
-                        print("Reached end of audio whilst decoding.")
+                        self._log("Reached end of audio whilst decoding.")
                         return image_data
 
                 pixel_time = mode.PIXEL_TIME
@@ -211,7 +218,7 @@ class SSTVDecoder:
 
                     # If we are performing fft past audio length, stop early
                     if px_end >= len(signal):
-                        print("Reached end of audio whilst decoding.")
+                        self._log("Reached end of audio whilst decoding.")
                         return image_data
 
                     pixel_area = signal[px_pos:px_end]
@@ -230,7 +237,7 @@ class SSTVDecoder:
         image = Image.new(mode.COLOR.mode_pil(), (width, height))
         pixel_data = image.load()
 
-        print("Drawing image data...")
+        self._log("Drawing picture")
 
         line = 0
         for y in range(height // (2 if odd_lines else 1)):
@@ -277,5 +284,5 @@ class SSTVDecoder:
 
         image = image.convert("RGB")
 
-        print("...Done!")
+        self._log("Finish")
         return image
