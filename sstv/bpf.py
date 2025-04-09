@@ -17,6 +17,12 @@ def cheby2_bandpass(low_cut, high_cut, fs, order=5):
     return b, a
 
 
+FILTERS = {
+    "butter": butter_bandpass,
+    "cheby2": cheby2_bandpass,
+}
+
+
 def bandpass_filter(signal, method, low_cut, high_cut, fs, order=5):
     b, a = method(low_cut, high_cut, fs, order=order)
     y = lfilter(b, a, signal)
