@@ -1,8 +1,0 @@
-ARG BASIC_PYTHON=python:3.10-alpine
-FROM $BASIC_PYTHON
-
-WORKDIR /app
-
-COPY . .
-
-ENTRYPOINT [ "python" ]

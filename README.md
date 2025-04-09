@@ -32,10 +32,6 @@ Documentation:
 
 `pip install -r requirements.txt`
 
-### Docker
-
-1. `docker build -t sstv .`
-
 ## Usage
 
 Examples:
