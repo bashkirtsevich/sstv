@@ -27,9 +27,9 @@ class PDMeta(ModeMetaclass):
 class PDAbstract(ModeWide):
     COLOR = ColorScheme.YUV
 
-    SYNC_PULSE = 0.009000  # sec
-    SYNC_PORCH = 0.001000  # sec
-    SEP_PULSE = 0.000100  # sec
+    SYNC_PULSE = 0.020000  # sec
+    SYNC_PORCH = 0.002080  # sec
+    SEP_PULSE = 0.0  # sec
     SEP_PORCH = 0.0
 
     CHAN_COUNT = 4
